@@ -74,6 +74,33 @@ mktimes(char *fmt, char *tzname)
 	return smprintf("%s", buf);
 }
 
+char *
+getcpuutil(void) {
+    long double a[4], b[4], loadavg;
+    FILE *fp;
+    fp = fopen("/proc/stat", "r");
+    fscanf(fp, "%*s %Lf %Lf %Lf %Lf", &a[0], &a[1], &a[2], &a[3]);
+    fclose(fp);
+    sleep(1);
+    fp = fopen("/proc/stat", "r");
+    fscanf(fp, "%*s %Lf %Lf %Lf %Lf", &b[0], &b[1], &b[2], &b[3]);
+    fclose(fp);
+    loadavg = ((b[0] + b[1] + b[2]) - (a[0] + a[1] + a[2])) / ((b[0] + b[1] + b[2] + b[3]) - (a[0] + a[1] + a[2] + a[3])) * 100;
+    return smprintf("%.0Lf", loadavg);
+}
+
+char *
+getcputemp(void) {
+    int temperature;
+    FILE *fp;
+
+    fp = fopen("/sys/class/hwmon/hwmon0/temp1_input", "r");
+    fscanf(fp, "%d", &temperature);
+    fclose(fp);
+
+    return smprintf("%d", temperature / 1000);
+}
+
 int
 getVolume()
 {
@@ -87,8 +114,25 @@ getVolume()
 	pclose(fp);
 	int result = atoi(read);
 	free(read);
-	
+
 	return result;
+}
+
+int
+getMicrophoneVolume()
+{
+        FILE *fp;
+        fp = popen("pulsemixer --id source-1 --get-volume | sed 's/ .*//'", "r");
+        char buffor[5];
+        char *read = malloc(sizeof(char) * sizeof(buffor));
+        while(fgets(buffor, sizeof(buffor), fp) != NULL){
+                sprintf(read,"%s", buffor);
+        }
+        pclose(fp);
+        int result = atoi(read);
+        free(read);
+
+        return result;
 }
 
 void
@@ -103,7 +147,10 @@ main(void)
 {
 	char *status;
 	char *tmbln;
+	char *cpuutil;
+	char *cputemp;
 	int volume;
+	int volumeMic;
 
 	if (!(dpy = XOpenDisplay(NULL))) {
 		fprintf(stderr, "dwmstatus: cannot open display.\n");
@@ -111,11 +158,17 @@ main(void)
 	}
 
 	for (;;sleep(1)) {
+		cputemp = getcputemp();
+		cpuutil = getcpuutil();
 		volume = getVolume();
+		volumeMic = getMicrophoneVolume();
 		tmbln = mktimes("%d %b %Y | %H:%M", tzberlin);
-		status = smprintf(" %d%% | %s ",volume,tmbln);
+		status = smprintf("\uf028 %d%% \uf130 %d%% | \uf2db %s%% \uf769 %s°C | %s "
+				,volume,volumeMic,cpuutil,cputemp,tmbln);
 		setstatus(status);
 
+		free(cputemp);
+		free(cpuutil);
 		free(tmbln);
 		free(status);
 	}
