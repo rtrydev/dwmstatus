@@ -74,6 +74,35 @@ mktimes(char *fmt, char *tzname)
 	return smprintf("%s", buf);
 }
 
+char* checklang(char* input){
+        char pl[12] = "xkb:pl::pol";
+        char jp[8] = "mozc-jp";
+        for(int i=0; i<sizeof(pl)-1; i++){
+                if(input[i] != pl[i]) break;
+                if(i == sizeof(pl)-2) return "PL";
+        }
+        for(int i=0; i<sizeof(jp)-1; i++){
+                if(input[i] != jp[i]) break;
+                if(i == sizeof(jp)-2) return "あ";
+        }
+        return "?";
+}
+
+char* getinput(){
+        FILE *fp;
+        fp = popen("ibus engine", "r");
+        char buffor[20];
+        char* read = malloc(sizeof(char) * sizeof(buffor));
+        while(fgets(buffor, sizeof(buffor), fp)!=NULL){
+                sprintf(read, "%s", buffor);
+        }
+        pclose(fp);
+        char* lang = smprintf("%s", checklang(read));
+        free(read);
+        return lang;
+}
+
+
 char *
 getcpuutil(void) {
     long double a[4], b[4], loadavg;
@@ -149,6 +178,7 @@ main(void)
 	char *tmbln;
 	char *cpuutil;
 	char *cputemp;
+	char *input;
 	int volume;
 	int volumeMic;
 
@@ -162,12 +192,14 @@ main(void)
 		cpuutil = getcpuutil();
 		volume = getVolume();
 		volumeMic = getMicrophoneVolume();
+		input = getinput();
 		tmbln = mktimes("%d %b %Y | %H:%M", tzberlin);
-		status = smprintf("\uf028 %d%% \uf130 %d%% | \uf2db %s%% \uf769 %s°C | %s "
-				,volume,volumeMic,cpuutil,cputemp,tmbln);
+		status = smprintf("\uf028 %d%% \uf130 %d%% | \uf2db %s%% \uf769 %s°C | \uf11c %s | %s "
+				,volume,volumeMic,cpuutil,cputemp,input,tmbln);
 		setstatus(status);
 
 		free(cputemp);
+		free(input);
 		free(cpuutil);
 		free(tmbln);
 		free(status);
