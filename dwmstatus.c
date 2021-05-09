@@ -194,7 +194,7 @@ main(void)
 		volumeMic = getMicrophoneVolume();
 		input = getinput();
 		tmbln = mktimes("%d %b %Y %H:%M", tzberlin);
-		status = smprintf("\uf2db %s%% \uf769 %s°C  \uf11c %s  \uf028 %d%% \uf130 %d%%  \uf073 %s "
+		status = smprintf("\ufb19  %s%%  \uf2c8 %s°C  \uf812  %s  \uf028  %d%%  \uf130 %d%%  \uf5f5  %s "
 				,cpuutil,cputemp,input,volume,volumeMic,tmbln);
 		setstatus(status);
 
